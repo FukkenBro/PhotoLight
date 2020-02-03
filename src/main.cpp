@@ -3,39 +3,50 @@
 #include <avr/sleep.h>
 // библиотека для работы с лентой
 #include "FastLED.h"
-//----------------------------------------НАСТРОИВАЕМЫЕ ПАРАМЕТРЫ:
-// задержка выключения [ms] (default 180 000ms = 30min)
-#define TIMER_DELAY 1800000
-// задержка для анимации RGB светодиодов [ms]
-#define THIS_DELAY 300
+
+//НЕИЗМЕНЯЕМЫЕ ПАРАМЕТРЫ: ========================================================
 // число светодиодов в кольце/ленте
 #define LED_COUNT 3
 // пин, к которому подключен DIN светодиодной ленты
 #define LED_DT 13
 // пин, к которому подключен светодиод индикатор
 #define LED_PIN 9
-// Яркость мигающего диода таймера
-#define PULSE_BRIGHTNES 250
 // пин, к которому подключена кнопка (1йконтакт - пин, 2йконтакт - GND, INPUT_PULLUP, default - HIGH);
 #define BUTTON_PIN 3
 // максимальная яркость RGB свтодиодов (0 - 255)
 #define MAX_BRIGHTNES 255
-// гистерезис функции debounce
-#define DEBOUNCE_DELAY 50
 // тип светодиодной ленты
 struct CRGB leds[LED_COUNT];
-//  стартовая позиция для отсчёта прерывания на основе millis() в методе debounce();
+
+//НАСТРОИВАЕМЫЕ ПАРАМЕТРЫ:=========================================================
+// задержка выключения [ms] (default 180 000ms = 30min)
+#define TIMER_DELAY 1800000
+// задержка для анимации RGB светодиодов [ms]
+#define THIS_DELAY 300
+
+//НАСТРОИВАЕМЫЕ ПАРАМЕТРЫ:=========================================================
+
+// перменные для debounce() .......................................................
+// стартовая позиция для отсчёта прерывания на основе millis() в методе debounce();
 unsigned long start = 0;
+// гистерезис функции debounce
+#define DEBOUNCE_DELAY 50
+
+//переменные для poll()............................................................
 // время выключения
 unsigned long shutDown = 0;
-// перменные для pulse()
+
+// перменные для pulse() ..........................................................
+// Яркость мигающего диода таймера
+#define PULSE_BRIGHTNES 250
 unsigned long pulseDelay;
 unsigned long pulseStart;
 byte pulseFade = 0;
 byte pulseFadeStep = 0;
-//
 unsigned long pulseStartTime = millis();
-//----------------------------------------FLAGS:
+
+
+//FLAGS: ==========================================================================
 // флаг для buttonRoutine()
 bool timerFlag = false;
 bool pulseFlag = false;
@@ -43,16 +54,7 @@ byte buttonState;
 byte *c;
 bool reset = false;
 
-// закрасить все диоды ленты в один цвет
-void one_color_all(int cred, int cgrn, int cblu)
-{
-  for (int i = 0; i < LED_COUNT; i++)
-  {
-    leds[i].setRGB(cred, cgrn, cblu);
-  }
-}
-
-// Иннициаллизация
+// Иннициаллизация функций ========================================================
 void interrupt();
 bool debounce();
 void buttonRoutine();
@@ -63,7 +65,17 @@ void pulse();
 void poll();
 void fadeOut();
 void kill();
+void animation1();
+// закрасить все диоды ленты в один цвет
+void one_color_all(int cred, int cgrn, int cblu)
+{
+  for (int i = 0; i < LED_COUNT; i++)
+  {
+    leds[i].setRGB(cred, cgrn, cblu);
+  }
+}
 
+//SETUP ===========================================================================
 void setup()
 {
   delay(100);
@@ -78,9 +90,15 @@ void setup()
   heat();
 }
 
+//LOOP ============================================================================
 void loop()
 {
-  uint16_t i, j;
+ animation1();
+}
+
+//FUNCTIONS =======================================================================
+void animation1(){
+ uint16_t i, j;
   for (j = 0; j < 256 * 5; j++)
   { // 5 cycles of all colors on wheel
     for (i = 0; i < LED_COUNT; i++)
@@ -95,6 +113,70 @@ void loop()
     }
     FastLED.show();
     delay(THIS_DELAY);
+  }
+}
+
+byte *Wheel(byte WheelPos)
+{
+  static byte c[3];
+  if (WheelPos < 85)
+  {
+    c[0] = WheelPos * 3;
+    c[1] = 255 - WheelPos * 3;
+    c[2] = 0;
+  }
+  else if (WheelPos < 170)
+  {
+    WheelPos -= 85;
+    c[0] = 255 - WheelPos * 3;
+    c[1] = 0;
+    c[2] = WheelPos * 3;
+  }
+  else
+  {
+    WheelPos -= 170;
+    c[0] = 0;
+    c[1] = WheelPos * 3;
+    c[2] = 255 - WheelPos * 3;
+  }
+  return c;
+}
+
+void heat()
+{
+  for (int i = 0; i <= 255; i++)
+  {
+    for (int j = 0; j < LED_COUNT; j++)
+    {
+      one_color_all(0, 0, i);
+    }
+    FastLED.show();
+    delay(5);
+  }
+}
+
+void fadeOut()
+{
+  byte red = *c;
+  byte green = *(c + 1);
+  byte blue = *(c + 2);
+  for (; (red >= 0) && (green >= 0) && (blue >= 0);)
+  {
+    if (red > 0)
+    {
+      red--;
+    }
+    if (green > 0)
+    {
+      green--;
+    }
+    if (blue > 0)
+    {
+      blue--;
+    }
+    one_color_all(red, green, blue);
+    FastLED.show();
+    delay(5);
   }
 }
 
@@ -163,45 +245,6 @@ void buttonRoutine()
   }
 }
 
-byte *Wheel(byte WheelPos)
-{
-  static byte c[3];
-  if (WheelPos < 85)
-  {
-    c[0] = WheelPos * 3;
-    c[1] = 255 - WheelPos * 3;
-    c[2] = 0;
-  }
-  else if (WheelPos < 170)
-  {
-    WheelPos -= 85;
-    c[0] = 255 - WheelPos * 3;
-    c[1] = 0;
-    c[2] = WheelPos * 3;
-  }
-  else
-  {
-    WheelPos -= 170;
-    c[0] = 0;
-    c[1] = WheelPos * 3;
-    c[2] = 255 - WheelPos * 3;
-  }
-  return c;
-}
-
-void heat()
-{
-  for (int i = 0; i <= 255; i++)
-  {
-    for (int j = 0; j < LED_COUNT; j++)
-    {
-      one_color_all(0, 0, i);
-    }
-    FastLED.show();
-    delay(5);
-  }
-}
-
 void pulse()
 {
   if (pulseDelay != 0)
@@ -226,18 +269,6 @@ void pulse()
   }
 }
 
-void pwrDown()
-{
-  reset = true;
-  analogWrite(LED_PIN, 0);
-  fadeOut();
-  timerFlag = false;
-  one_color_all(0, 0, 0); // погасить все светодиоды
-  LEDS.show();
-  delay(1000);
-  kill();
-}
-
 void poll()
 {
   if (timerFlag == true && shutDown != 0)
@@ -252,29 +283,16 @@ void poll()
   // Serial.println(buttonState);
 }
 
-void fadeOut()
+void pwrDown()
 {
-  byte red = *c;
-  byte green = *(c + 1);
-  byte blue = *(c + 2);
-  for (; (red >= 0) && (green >= 0) && (blue >= 0);)
-  {
-    if (red > 0)
-    {
-      red--;
-    }
-    if (green > 0)
-    {
-      green--;
-    }
-    if (blue > 0)
-    {
-      blue--;
-    }
-    one_color_all(red, green, blue);
-    FastLED.show();
-    delay(5);
-  }
+  reset = true;
+  analogWrite(LED_PIN, 0);
+  fadeOut();
+  timerFlag = false;
+  one_color_all(0, 0, 0); // погасить все светодиоды
+  LEDS.show();
+  delay(1000);
+  kill();
 }
 
 void kill()

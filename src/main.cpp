@@ -37,7 +37,6 @@ volatile int pressTimer = 0;
 //переменные для poll()............................................................
 // время выключения
 unsigned long shutDown = 0;
-
 // перменные для pulse() ..........................................................
 // Яркость мигающего диода таймера
 #define PULSE_BRIGHTNES 250
@@ -45,9 +44,15 @@ unsigned long pulseDelay;
 unsigned long pulseStart;
 byte pulseFade = 0;
 byte pulseFadeStep = 0;
-unsigned long pulseStartTime = millis();
-int tmp = 0;
 int mode = 1;
+// перменные для interrupt() ..........................................................
+// Яркость мигающего диода таймера
+// Button input related values
+static const int STATE_NORMAL = 0; // no button activity
+static const int STATE_SHORT = 1;  // short button press
+static const int STATE_LONG = 2;   // long button press
+volatile int resultButton = 0;     // global value set by checkButton()
+
 //FLAGS: ==========================================================================
 // флаг для buttonRoutine()
 bool timerFlag = false;
@@ -55,7 +60,6 @@ bool pulseFlag = false;
 byte buttonState;
 byte *c;
 bool reset = false;
-
 bool forceExit = false;
 
 // Иннициаллизация функций ========================================================
@@ -102,51 +106,45 @@ void setup()
 void loop()
 {
   forceExit = false;
+  resetColor();
   if (mode == 1)
   {
-    resetColor();
     Serial.println("Animation in mode 1");
     animation1(1);
     return;
   }
   else if (mode == 2)
   {
-    resetColor();
     Serial.println("Animation in mode 2");
     animation1(5);
     return;
   }
   else if (mode == 3)
   {
-    resetColor();
     Serial.println("Animation in mode 3");
     animation1(20);
     return;
   }
   else if (mode == 4)
   {
-    resetColor();
     Serial.println("Animation in mode 4");
     animation2(3, 1);
     return;
   }
   else if (mode == 5)
   {
-    resetColor();
     Serial.println("Animation in mode 5");
     animation2(3, 5);
     return;
   }
   else if (mode == 6)
   {
-    resetColor();
     Serial.println("Animation in mode 6");
     animation2(3, 20);
     return;
   }
   else
   {
-    resetColor();
     Serial.println("defaul mode animation");
     animation1(1);
     return;
@@ -186,6 +184,18 @@ void animation2(byte hueDelta, byte speedMultiplier)
     for (i = 0; i < LED_COUNT; i++)
     {
       c = Wheel(((i * 256 / hueDelta) + j) & 255);
+      byte red = *c;
+      byte green = *(c + 1);
+      byte blue = *(c + 2);
+      Serial.print("LED ");
+      Serial.print(i);
+      Serial.print(" =(");
+      Serial.print(red);
+      Serial.print(",");
+      Serial.print(green);
+      Serial.print(",");
+      Serial.print(blue);
+      Serial.println(")");
       leds[i].setRGB(*c, *(c + 1), *(c + 2));
     }
     if (timerFlag == true)
@@ -243,35 +253,67 @@ void heat()
 
 void fadeOut()
 {
-  byte red = *c;
-  byte green = *(c + 1);
-  byte blue = *(c + 2);
-  for (; (red >= 0) && (green >= 0) && (blue >= 0);)
+  if (mode == 1 || mode == 2 || mode == 3)
   {
-    if (red > 0)
+    Serial.println("Fade 1");
+    byte red = *c;
+    byte green = *(c + 1);
+    byte blue = *(c + 2);
+    for (; (red >= 0) || (green >= 0) || (blue >= 0);)
     {
-      red--;
+      if (red > 0)
+      {
+        red--;
+      }
+      if (green > 0)
+      {
+        green--;
+      }
+      if (blue > 0)
+      {
+        blue--;
+      }
+      one_color_all(red, green, blue);
+      FastLED.show();
+      delay(5);
+       if(red==0&&green==0&&blue==0){
+        return;
+      }
     }
-    if (green > 0)
+  }
+  if (mode == 4 || mode == 5 || mode == 6)
+  {
+    Serial.println("Fade 2");
+    byte red = *c;
+    byte green = *(c + 1);
+    byte blue = *(c + 2);
+    for (; (red >= 0) && (green >= 0) && (blue >= 0);)
     {
-      green--;
+      if (red > 0)
+      {
+        red--;
+      }
+      if (green > 0)
+      {
+        green--;
+      }
+      if (blue > 0)
+      {
+        blue--;
+      }
+      leds[2].setRGB(red, green, blue);
+      leds[0].setRGB(green, blue, red);
+      leds[1].setRGB(blue, red, green);
+      FastLED.show();
+      delay(5);
+      if(red==0&&green==0&&blue==0){
+        return;
+      }
     }
-    if (blue > 0)
-    {
-      blue--;
-    }
-    one_color_all(red, green, blue);
-    FastLED.show();
-    delay(5);
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// Button input related values
-static const int STATE_NORMAL = 0; // no button activity
-static const int STATE_SHORT = 1;  // short button press
-static const int STATE_LONG = 2;   // long button press
-volatile int resultButton = 0;     // global value set by checkButton()
 
 void interrupt()
 {

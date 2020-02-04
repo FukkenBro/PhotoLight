@@ -22,7 +22,7 @@ struct CRGB leds[LED_COUNT];
 
 //НАСТРОИВАЕМЫЕ ПАРАМЕТРЫ:=========================================================
 // задержка выключения [ms] (default 180 000ms = 30min)
-#define TIMER_DELAY 1800000
+#define TIMER_DELAY 3000
 // задержка для анимации RGB светодиодов [ms]
 #define THIS_DELAY 300
 
@@ -56,7 +56,7 @@ byte buttonState;
 byte *c;
 bool reset = false;
 
-// volatile unsigned long tmp = 0;
+bool forceExit = false;
 
 // Иннициаллизация функций ========================================================
 void interrupt();
@@ -73,6 +73,7 @@ void animation2(byte hueDelta, byte speedMultiplier);
 void resetCheck();
 void onButtonClick();
 void onButtonHold();
+void resetColor();
 // закрасить все диоды ленты в один цвет
 void one_color_all(int cred, int cgrn, int cblu)
 {
@@ -100,40 +101,55 @@ void setup()
 //LOOP ============================================================================
 void loop()
 {
+  forceExit = false;
   if (mode == 1)
   {
+    resetColor();
     Serial.println("Animation in mode 1");
     animation1(1);
+    return;
   }
   else if (mode == 2)
   {
+    resetColor();
     Serial.println("Animation in mode 2");
     animation1(5);
+    return;
   }
   else if (mode == 3)
   {
+    resetColor();
     Serial.println("Animation in mode 3");
     animation1(20);
+    return;
   }
   else if (mode == 4)
   {
+    resetColor();
     Serial.println("Animation in mode 4");
     animation2(3, 1);
+    return;
   }
   else if (mode == 5)
   {
+    resetColor();
     Serial.println("Animation in mode 5");
     animation2(3, 5);
+    return;
   }
   else if (mode == 6)
   {
+    resetColor();
     Serial.println("Animation in mode 6");
     animation2(3, 20);
+    return;
   }
   else
   {
+    resetColor();
     Serial.println("defaul mode animation");
     animation1(1);
+    return;
   }
 }
 
@@ -152,6 +168,10 @@ void animation1(byte speedMultiplier)
     {
       pulse();
       poll();
+    }
+    if (forceExit)
+    {
+      return;
     }
     FastLED.show();
     delay(THIS_DELAY / speedMultiplier);
@@ -172,6 +192,10 @@ void animation2(byte hueDelta, byte speedMultiplier)
     {
       pulse();
       poll();
+    }
+    if (forceExit)
+    {
+      return;
     }
     FastLED.show();
     delay(THIS_DELAY / speedMultiplier);
@@ -245,9 +269,9 @@ void fadeOut()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Button input related values
 static const int STATE_NORMAL = 0; // no button activity
-static const int STATE_SHORT = 1; // short button press
-static const int STATE_LONG = 2; // long button press
-volatile int resultButton = 0; // global value set by checkButton()
+static const int STATE_SHORT = 1;  // short button press
+static const int STATE_LONG = 2;   // long button press
+volatile int resultButton = 0;     // global value set by checkButton()
 
 void interrupt()
 {
@@ -258,7 +282,7 @@ void interrupt()
   * function is driven by pin changes.
   */
 
-  const unsigned long LONG_DELTA = 500ul;              // hold seconds for a long press
+  const unsigned long LONG_DELTA = 500ul;               // hold seconds for a long press
   const unsigned long DEBOUNCE_DELTA = 50ul;            // debounce time
   static int lastButtonStatus = HIGH;                   // HIGH indicates the button is NOT pressed
   int buttonStatus;                                     // button atate Pressed/LOW; Open/HIGH
@@ -420,7 +444,15 @@ void onButtonHold()
     delay(10);
   }
   analogWrite(LED_PIN, 0);
-  loop();
+  forceExit = true;
+}
+
+void resetColor()
+{
+  for (size_t i = 0; i < 3; i++)
+  {
+    c[i] = 0;
+  }
 }
 // void interrupt()
 // {

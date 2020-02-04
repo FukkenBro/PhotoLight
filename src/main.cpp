@@ -184,9 +184,6 @@ void animation2(byte hueDelta, byte speedMultiplier)
     for (i = 0; i < LED_COUNT; i++)
     {
       c = Wheel(((i * 256 / hueDelta) + j) & 255);
-      byte red = *c;
-      byte green = *(c + 1);
-      byte blue = *(c + 2);
       leds[i].setRGB(*c, *(c + 1), *(c + 2));
     }
     if (timerFlag == true)
@@ -246,7 +243,6 @@ void fadeOut()
 {
   if (mode == 1 || mode == 2 || mode == 3)
   {
-    Serial.println("Fade 1");
     byte red = *c;
     byte green = *(c + 1);
     byte blue = *(c + 2);
@@ -274,7 +270,6 @@ void fadeOut()
   }
   if (mode == 4 || mode == 5 || mode == 6)
   {
-    Serial.println("Fade 2");
     byte red = *c;
     byte green = *(c + 1);
     byte blue = *(c + 2);
@@ -295,6 +290,7 @@ void fadeOut()
       leds[2].setRGB(red, green, blue);
       leds[0].setRGB(green, blue, red);
       leds[1].setRGB(blue, red, green);
+
       FastLED.show();
       delay(5);
       if(red==0&&green==0&&blue==0){

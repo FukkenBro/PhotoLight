@@ -21,8 +21,8 @@ struct CRGB leds[LED_COUNT];
 #define HOLD_DURATION 150
 
 //НАСТРОИВАЕМЫЕ ПАРАМЕТРЫ:=========================================================
-// задержка выключения [ms] (default 180 000ms = 30min)
-#define TIMER_DELAY 3000
+// задержка выключения [ms] (default 1 800 000ms = 30min)
+#define TIMER_DELAY 1800000
 // задержка для анимации RGB светодиодов [ms]
 #define THIS_DELAY 300
 
@@ -467,10 +467,10 @@ void onButtonHold()
   }
   Serial.print("NOW MODE ");
   Serial.println(mode);
-  for (size_t i = 255; i > 0; i--)
+  for (size_t i = 100; i > 0; i--)
   {
     analogWrite(LED_PIN, i);
-    delay(10);
+    delay(20);
   }
   analogWrite(LED_PIN, 0);
   forceExit = true;

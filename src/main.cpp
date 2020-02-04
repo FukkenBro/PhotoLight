@@ -187,15 +187,6 @@ void animation2(byte hueDelta, byte speedMultiplier)
       byte red = *c;
       byte green = *(c + 1);
       byte blue = *(c + 2);
-      Serial.print("LED ");
-      Serial.print(i);
-      Serial.print(" =(");
-      Serial.print(red);
-      Serial.print(",");
-      Serial.print(green);
-      Serial.print(",");
-      Serial.print(blue);
-      Serial.println(")");
       leds[i].setRGB(*c, *(c + 1), *(c + 2));
     }
     if (timerFlag == true)
@@ -404,8 +395,8 @@ void poll()
       pwrDown();
     }
   }
-  Serial.print("До выключения (сек.) ");
-  Serial.println((shutDown - millis()) / 1000);
+  // Serial.print("До выключения (сек.) ");
+  // Serial.println((shutDown - millis()) / 1000);
 }
 
 void pwrDown()
